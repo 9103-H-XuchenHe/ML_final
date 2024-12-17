@@ -26,7 +26,7 @@ Therefore, the first step is to preprocess the data. I downloaded two tables fro
 
 **Original data**:
 
-![1.png](1.png)
+![1.png](image-20241217104035983.png)
 
 ![image-20241217104058585.png](image-20241217104058585.png)
 
