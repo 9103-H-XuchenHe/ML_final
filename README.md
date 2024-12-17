@@ -1,168 +1,142 @@
-# **Week 01**
+# Week 01
 
-In another course, UX Design, I designed a housing search app based on LLM and RAG. Currently, we can recommend a variety of housing options based on user-provided information. However, we cannot yet predict housing price trends. Housing price trends are crucial, as they not only help tenants decide when to move in but also help landlords determine rental prices based on supply and demand.
+我在另一门课 UX design 上，设计了一款基于 LLM 和 RAG 的找房 App，目前我们可以根据用户提供的信息进行多样化的房源推荐，但是，我们目前无法预测房价的走势。房价的走势非常关键，不仅可以帮助租户确定入住的时间，也可以帮助房主根据供需关系更好地确定租金价格。
 
-Thus, my topic at this step is very clear: predicting rental prices over time for all neighborhoods in New York City.
+因此我在这一步的选题非常明确，就是针对于纽约市的所有社区的租金进行时间序列的预测。
 
-For the dataset, I used publicly available data from **Streeteasy**. The dataset includes the median rent prices for all 155 neighborhoods in NYC after 2010, as well as the number of vacant rooms in these neighborhoods each month. The dataset cannot be directly used and contains some null values, so preprocessing and data merging are necessary. Splitting the data into training and testing sets is also meaningful. For evaluation, I will use traditional methods such as the mean square error (MSE) and mean absolute error (MAE) between predicted and actual results.
+我在数据集上采用了 streeteasy 公开的数据集，数据集包括 2010 年之后，纽约市全部 155 个社区的租金中位数，以及这些社区每个月空置的房间数量，数据集的格式无法直接使用，并且包含一些空值，因此需要一些预处理和数据合并，将其拆分为训练和测试数据也是非常有意义的。评估方法，我将使用比较传统的评估方式，也就是评估预测结果和原始结果的均方误差，平均绝对误差等等。
 
-The question I want to explore is: **How can rental prices be predicted using move-in time, vacant room counts, and neighborhoods?**
+我想要探索的是：如何通过入住时间、空置房间数量、与社区来预测房租价格。
 
-Move-in time is a time series, but the number of vacant rooms and the neighborhood are not.
+因为入住时间是一个时间序列，空置房间数量与社区并不是时间序列。
 
----
+# Week 02
 
-# **Week 02**
+因此首先我们要进行数据的预处理。我从 Streeteasy 的开放数据网站上下载得到这样两个表格，他们分别记录了不同时间下，各个社区的空置房间数量和价格中位数：
 
-First, we need to preprocess the data. I downloaded two tables from Streeteasy's open data website, which record the number of vacant rooms and the median rent prices across different neighborhoods at various times.
+下载的链接在：
+https://streeteasy.com/blog/download-data/
 
-**Download link**:  
-[https://streeteasy.com/blog/download-data/](https://streeteasy.com/blog/download-data/)
+我总共有 14000+条记录，格式是 excel，后续我会把它转换为dataframe 格式
 
-- I obtained over **14,000 records** in Excel format, which I later converted into a DataFrame.
-- After removing null values, I had around **10,000 records**.
-- **Features**: `areaName`, `Year`, `Month`, `InventoryCount`  
-- **Target variable**: `Price`
+去除空值之后我大约有 10000 条数据
 
-**Original data**:  
+我有特征和结果变量，特征变量有：areaName, Year, Month, InventoryCount, 结果变量有：Price
 
-![Original data](1.png)
+下载下来的原始数据是：
 
-To process this data, we needed to make time a single variable and include it as a column in the table. The result looked like this:
+![1.png](1.png)
 
-![Processed Data Screenshot]  
+![image-20241217104058585.png](image-20241217104058585.png)
 
-Next, I merged the **price** and **inventory** tables, removing rows with null values:
+要处理这些数据，我们需要将时间变为一个变量，因此需要将时间变成表格中的一列，处理完就是下面这样：
 
-![Merged Data Screenshot]  
+![image-20241217150509212.png](image-20241217150509212.png)
 
-Additionally, I split the time column into **Year** and **Month** features and encoded neighborhood names as numeric values because models can only accept numeric inputs.
+![image-20241217104255030.png](image-20241217104255030.png)
 
-![Final Preprocessed Data Screenshot]  
+然后，我们将 price 和 inventory 的表格合并，并去除其中包含空值的行。
 
-Like in our previous assignments, all variables were normalized at this stage. With this, the data was ready for modeling!
+![image-20241217150524601.png](image-20241217150524601.png)
 
-**Note**: Dear Professor Hersan, I did not save weekly versions of my Jupyter Notebook. However, you can find all the code in my final notebook. Some parts of the code might be commented out, but you will definitely find everything.
+![image-20241217104419386.png](image-20241217104419386.png)
 
----
+最终得到上面这个数据集。
 
-# **Week 03**
+![image-20241217150555859.png](image-20241217150555859.png)
 
-Since my data involves time series predictions, I chose to use an **LSTM model**. The reason is that RNN models tend to ignore long-term time dependencies when processing long sequences, leading to the vanishing gradient problem. LSTMs, on the other hand, have memory cells, and we can control the sequence length to ensure the model does not forget historical information for specific features.
+除此之外，我还需要将数据源的时间特征拆解为 Year 和 Month
 
-### **Model Structure**
+并且需要将社区名称进行编码，只有数字才可以被输入模型
 
-The model input parameters are divided into two parts:
-1. **Sequence Features**: Features we want the model to retain over time.
-2. **Static Features**: Features that do not change over time, such as `areaName` and `InventoryCount`.
+![image-20241217150729407.png](image-20241217150729407.png)
 
-For sequence data, I used **LSTM layers**, and for static features, I used **Dense layers**. The features were later fused at a higher level:
+当然，和我们之前所有的作业一样，我们需要将所有的变量归一化。到这一步，我们的数据就准备好了！
 
-![Model Architecture Diagram]  
+【Note】：尊敬的 Hersan 教授，抱歉，我没有保存每周的 jupyter notebook 版本，但是您可以在我的最终 notebook 中找到上面的所有代码，一部分代码可能被注释了，但您一定能找到。
 
-I generated the data structure for time series input and target values:
+# Week 03
 
-![Time Series Structure Screenshot]  
+因为我的数据是一个跟随时间序列变化的预测，因此我想使用LSTM 模型。这个原因是 RNN 这样的模型，在处理长序列的数据时，容易忽视远距离的时间依赖关系，也就是会出现梯度消失现象。
+而 LSTM 有记忆单元，我们可以控制 seqence 的长度，来控制模型不要忘记某个特定特征的历史信息。
 
-Here, `seq_length` is the **memory length** for the LSTM model. At each step, we use `seq_length` consecutive time points as input, and the target value is the value after the `seq_length` time points. To ensure uniform input size, we removed the first `seq_length` rows.
+因此，我开始建构我的模型。这个模型将输入参数分为两个部分，第一个部分是序列特征，也就是我们希望模型能够长期保留的特征，而第二部分是固定特征，也就是不会随着时间而改变的一些特征，包括areaName 和 InventoryCount.
 
-Finally, I constructed two input layers for **time series** and **static features**, connected them, and built relationships between inputs and outputs:
+![image-20241217130832056.png](image-20241217130832056.png)
 
-![Final Model Structure Screenshot]  
+我希望对于序列数据，使用 LSTM 处理；对于固定特征，使用Dense 进行静态特征处理，然后在高层级进行特征融合。就像这样：
 
-Using the prepared dataset, I trained the model with both feature types as inputs.
+![image-20241217150228750.png](image-20241217150228750.png)
 
-**Note**: Dear Professor Hersan, I did not save weekly versions of my Jupyter Notebook. However, you can find all the code in my final notebook.
+具体的做法的话，我们开始需要生成时间序列的数据和目标值的结构：
 
----
+![image-20241217151216503.png](image-20241217151216503.png)
 
-# **Week 04**
+![image-20241217151229824.png](image-20241217151229824.png)
 
-After outputting results last week, I realized I forgot to **reverse the normalization**:
+这边有一个 seq_length，这就是LSTM 模型中的记忆的长度，我们每次都会截取 seq_length个连续时间节点的数据，而目标值，是seq_length 个时间节点之后的值。
 
-![Normalization Reversal Screenshot]  
+为了统一输入特征的 size，我们需要去掉前 seq_length 行：
 
-After fixing this, I plotted the predictions and calculated the evaluation metrics. However, the results were not good:
+![image-20241217151515701.png](image-20241217151515701.png)
 
-![Poor Results Screenshot]  
+最后，我们需要构建两个输入层，分别是时间序列和静态特征的输入层与输出层
 
-### **Issues Identified**
+![image-20241217151545203.png](image-20241217151545203.png)
 
-1. **Issue 1**: Incorrect Month Encoding  
-I used the same encoder for the month variable as for the neighborhood names, which is incorrect. Encoding months as arbitrary integers does not capture their sequential and cyclical nature. For example, "2019-01" encoded as 0 and "2019-02" encoded as 1 are just labels, not actual time relationships.
+然后，我们需要融合两个部分的特征值，使用这个特征值进行输出；并且，构建输入与输出之间的关系。
 
-To address this, I used **sin and cos encoding** for months to reflect their cyclical nature:
+![image-20241217151729004.png](image-20241217151729004.png)
 
-![Sin-Cos Encoding Screenshot]  
+最后，使用切分好的数据集，进行模型的训练，同时输入两个类型的特征。
 
-2. **Issue 2**: Feature Division Problems  
-In the LSTM input layer, I included both **month** and **year** since these are strongly time-dependent variables. Meanwhile, `areaName` and `InventoryCount` were treated as static features.
+![image-20241217151933978.png](image-20241217151933978.png)
 
-![Feature Division Screenshot]  
+![image-20241217151901296.png](image-20241217151901296.png)
 
-For the `Price` variable, I decided to use it as a **static input**. Although `Price` changes over time, treating it as a static input allows the model to reference short-term price values while focusing on overall trends.
+【Note】：尊敬的 Hersan 教授，抱歉，我没有保存每周的 jupyter notebook 版本，但是您可以在我的最终 notebook 中找到上面的所有代码，一部分代码可能被注释了，但您一定能找到。
 
----
+# Week04
 
-### **Optimization Results**
+在上周的输出后，我忘记了要进行反归一化：
 
-To optimize the model, I wrapped all the code into a function with two variables:
-1. **`seq_length`**: LSTM memory length.
-2. **`epoch_size`**: Model iteration count.
+![image-20241217152127196.png](image-20241217152127196.png)
 
-I experimented with different combinations of `seq_length` and `epoch_size` and selected the model with the smallest error.
+在最后，完成归一化之后，我可以直接画图进行输出，并输出评价指标。
 
-| seq_length | epoch_size | MSE                    | RMSE                  | MAE                   | R2                    |
-| ---------- | ---------- | ---------------------- | --------------------- | --------------------- | --------------------- |
-| 2          | 2          | 1221789.976940828      | 1105.3460892140652    | 766.2831308960443     | 0.23041283019969327   |
-| 2          | 10         | 1824944.0861562665     | 1350.9049138100972    | 952.2712138662225     | -0.14950489103318843  |
-| 2          | 20         | 1557648.2392418766     | 1248.057786819936     | 838.5944659689198     | 0.018860751351013172  |
-| 2          | 30         | 4222.400250813167      | 64.97999885205576     | 43.178592509997216    | 0.9973403734519711    |
-| 2          | 40         | 2219.0049882932744     | 47.10631580046644     | 24.92165901274549     | 0.998602282060793     |
-| 2          | 50         | 42326.86130712687      | 205.73492972056755    | 141.43563958571357    | 0.9733389453059333    |
-| 2          | 100        | 1275877.1301446394     | 1129.547312043475     | 1129.4014411051753    | 0.19634414413885415   |
-| 2          | 150        | 2332.3732208686106     | 48.294650023254235    | 47.05361706880711     | 0.9985308731125291    |
-| 2          | 200        | 35242.73367822462      | 187.73048148402705    | 187.13715952997623    | 0.9778011309804971    |
-| 10         | 2          | 6355312.9226161195     | 2520.974597772877     | 2046.1505126406887    | -3.0013674568368733   |
-| 10         | 10         | 4192023.4557723673     | 2047.4431508035498    | 1588.6565767956686    | -1.6393391542582885   |
-| 10         | 20         | 5932955.014087635      | 2435.765796230753     | 2059.2526016398747    | -2.7354467679736283   |
-| **10**     | **30**     | **1967.3052565219643** | **44.35431497072144** | **16.99454372744017** | **0.998761365281779** |
-| 10         | 40         | 80104.31709202983      | 283.02706070626857    | 238.28642349001728    | 0.9495655349363589    |
-| 10         | 50         | 31592.260297384124     | 177.74211739873058    | 50.48675713358045     | 0.9801092025237624    |
-| 10         | 100        | 386881.4562974389      | 621.9979552196605     | 541.2422915953624     | 0.7564156340164941    |
-| 10         | 150        | 150132.10394024113     | 387.4688425412308     | 300.634205069723      | 0.9054753523158315    |
-| 10         | 200        | 19937244.660922825     | 4465.114182293979     | 4462.860033833448     | -11.552685121344423   |
-| 20         | 2          | 234890743.96949655     | 15326.145763677721    | 13505.05487470187     | -146.8144728613517    |
-| 20         | 10         | 55864788.89447125      | 7474.2751417425925    | 6692.726751207999     | -34.155171218748904   |
-| 20         | 20         | 39421793.50655279      | 6278.6776877422835    | 5526.457340562587     | -23.807753289660834   |
-| 20         | 30         | 3539352.156480954      | 1881.3166018724637    | 1439.266321192069     | -1.227280072597754    |
-| 20         | 40         | 535334.9484007135      | 731.6658721033211     | 729.5401708119176     | 0.6631188957688923    |
-| 20         | 50         | 6133536.138882598      | 2476.5976941931035    | 1857.0522519945862    | -2.859774956746351    |
-| 20         | 100        | 12137844.247000523     | 3483.940907506975     | 3421.3656774145898    | -6.638227963876537    |
-| 20         | 150        | 324896.2511082999      | 569.9967114890225     | 503.6776551900111     | 0.7955459322039558    |
-| 20         | 200        | 2935.323724962932      | 54.17862793540394     | 8.377785552211213     | 0.9981528291760225    |
-| 30         | 2          | 1333976114907.5544     | 1154978.8374284415    | 1154971.3873365042    | -839927.9405244429    |
-| 30         | 10         | 155185733.91039667     | 12457.356618095055    | 11189.08881140516     | -96.71163637131582    |
-| 30         | 20         | 10072780.235701323     | 3173.7643636069333    | 2417.922466287951     | -5.342257209076396    |
-| 30         | 30         | 106708737.58784658     | 10329.992138808557    | 9134.270571633742     | -66.18842706795544    |
-| 30         | 40         | 4936785.771535054      | 2221.8878845556214    | 1837.1541874097145    | -2.1084134088629773   |
-| 30         | 50         | 2671978.0591134694     | 1634.6186280333004    | 1187.1276978119658    | -0.6823927169425095   |
-| 30         | 100        | 44438052.35478102      | 6666.1872427033595    | 6640.946409536174     | -26.98011584780705    |
-| 30         | 150        | 10109183.95857187      | 3179.494292898144     | 2512.753432260942     | -5.365178564294156    |
-| 30         | 200        | 56457034.76584063      | 7513.789640776526     | 6590.551496415397     | -34.54778595065804    |
+![image-20241217152837579.png](image-20241217152837579.png)
 
-At `epoch_size = 30` and `seq_length = 10`, the model achieved its best performance, with an average price prediction error of **$17**.
+但是，结果很不好.......
 
-![Best Model Results Screenshot]  
+![image-20241217123501967.png](image-20241217123501967.png)
 
----
+我们可以看到散点图中，预测值和真实值的偏差非常大。接着，我就开始找问题：
 
-### **Future Work**
+**第一个问题：**
 
-I noticed that the model's accuracy decreases for higher-priced properties. This is likely due to insufficient data for this price range. To further optimize the model, more data for high-priced properties needs to be collected.
+我在编码月份的时候，使用了和社区名称一样的编码器，这是错误的。
 
-**Note**: Dear Professor Hersan, I did not save weekly versions of my Jupyter Notebook. However, you can find all the code in my final notebook.
+![image-20241217130416882.png](image-20241217130416882.png)
 
---- 
+除此之外，我还在网上找到了一个对于月份的更好的编码方式——使用 sin和 cos。
 
-Let me know if you need further refinements or additional formatting! 😊
+![image-20241217130339190.png](image-20241217130339190.png)
+
+**第二个问题：**
+
+原先的特征划分有问题！
+
+![image-20241217130701779.png](image-20241217130701779.png)
+
+![image-20241217153804060.png](image-20241217153804060.png)
+
+在调整过后，我们可以得到一个预测准确率接近百分百的模型。
+
+![image-20241217131209765.png](image-20241217131209765.png)
+
+![image-20241217162152065.png](image-20241217162152065.png)
+
+结果是：当 epoch_size=30,seq_length=10 时，模型达到最佳状态，平均预测价格的偏差在 17 美金左右。
+
+![image-20241217162552148.png](image-20241217162552148.png)
+
