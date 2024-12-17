@@ -1,142 +1,151 @@
-# Week 01
+# **Week 01**
 
-我在另一门课 UX design 上，设计了一款基于 LLM 和 RAG 的找房 App，目前我们可以根据用户提供的信息进行多样化的房源推荐，但是，我们目前无法预测房价的走势。房价的走势非常关键，不仅可以帮助租户确定入住的时间，也可以帮助房主根据供需关系更好地确定租金价格。
+In another UX design course, I designed a housing search app based on **LLM** and **RAG**. Currently, we can recommend various housing options based on user-provided information. However, we cannot predict housing price trends. Housing price trends are very important as they help tenants determine the optimal move-in time and assist landlords in setting rent prices based on supply and demand.
 
-因此我在这一步的选题非常明确，就是针对于纽约市的所有社区的租金进行时间序列的预测。
+Thus, my focus at this step is very clear: **predicting rental prices over time for all neighborhoods in New York City.**
 
-我在数据集上采用了 streeteasy 公开的数据集，数据集包括 2010 年之后，纽约市全部 155 个社区的租金中位数，以及这些社区每个月空置的房间数量，数据集的格式无法直接使用，并且包含一些空值，因此需要一些预处理和数据合并，将其拆分为训练和测试数据也是非常有意义的。评估方法，我将使用比较传统的评估方式，也就是评估预测结果和原始结果的均方误差，平均绝对误差等等。
+I used the publicly available **Streeteasy** dataset, which includes the median rent prices of all 155 NYC neighborhoods after 2010, as well as the number of vacant rooms per month in these neighborhoods. The dataset cannot be directly used and contains null values, so preprocessing and data merging are required. Splitting the data into training and test sets is also meaningful. For evaluation, I will use traditional evaluation metrics such as mean square error (MSE), mean absolute error (MAE), etc.
 
-我想要探索的是：如何通过入住时间、空置房间数量、与社区来预测房租价格。
+The question I want to explore is: **How can rental prices be predicted using move-in time, the number of vacant rooms, and neighborhoods?**
 
-因为入住时间是一个时间序列，空置房间数量与社区并不是时间序列。
+Move-in time is a time series, while the number of vacant rooms and the neighborhood are not.
 
-# Week 02
+---
 
-因此首先我们要进行数据的预处理。我从 Streeteasy 的开放数据网站上下载得到这样两个表格，他们分别记录了不同时间下，各个社区的空置房间数量和价格中位数：
+# **Week 02**
 
-下载的链接在：
-https://streeteasy.com/blog/download-data/
+Therefore, the first step is to preprocess the data. I downloaded two tables from **Streeteasy's open data** website, which record the number of vacant rooms and the median rent prices across different neighborhoods at various times.
 
-我总共有 14000+条记录，格式是 excel，后续我会把它转换为dataframe 格式
+**Download link**:  
+[https://streeteasy.com/blog/download-data/](https://streeteasy.com/blog/download-data/)
 
-去除空值之后我大约有 10000 条数据
+- I obtained over **14,000 records** in Excel format, which I later converted into a DataFrame.
+- After removing null values, I had approximately **10,000 records**.
+- **Feature variables**: `areaName`, `Year`, `Month`, `InventoryCount`  
+- **Target variable**: `Price`
 
-我有特征和结果变量，特征变量有：areaName, Year, Month, InventoryCount, 结果变量有：Price
-
-下载下来的原始数据是：
+**Original data**:
 
 ![1.png](1.png)
 
 ![image-20241217104058585.png](image-20241217104058585.png)
 
-要处理这些数据，我们需要将时间变为一个变量，因此需要将时间变成表格中的一列，处理完就是下面这样：
+To process this data, we needed to make time a single variable and include it as a column in the table. The result looked like this:
 
 ![image-20241217150509212.png](image-20241217150509212.png)
 
 ![image-20241217104255030.png](image-20241217104255030.png)
 
-然后，我们将 price 和 inventory 的表格合并，并去除其中包含空值的行。
+Next, we merged the **price** and **inventory** tables and removed rows with null values.
 
 ![image-20241217150524601.png](image-20241217150524601.png)
 
 ![image-20241217104419386.png](image-20241217104419386.png)
 
-最终得到上面这个数据集。
+The final dataset looks like this:
 
 ![image-20241217150555859.png](image-20241217150555859.png)
 
-除此之外，我还需要将数据源的时间特征拆解为 Year 和 Month
-
-并且需要将社区名称进行编码，只有数字才可以被输入模型
+Additionally, I split the time feature into **Year** and **Month**, and encoded the `areaName` feature into numeric values because models can only accept numeric inputs.
 
 ![image-20241217150729407.png](image-20241217150729407.png)
 
-当然，和我们之前所有的作业一样，我们需要将所有的变量归一化。到这一步，我们的数据就准备好了！
+Of course, like all our previous assignments, we need to normalize all the variables. At this point, our data is ready!
 
-【Note】：尊敬的 Hersan 教授，抱歉，我没有保存每周的 jupyter notebook 版本，但是您可以在我的最终 notebook 中找到上面的所有代码，一部分代码可能被注释了，但您一定能找到。
+**Note**: Dear Professor Hersan, I apologize for not saving weekly versions of my Jupyter Notebook, but you can find all the code in my final notebook. Some parts might be commented out, but you will definitely find them.
 
-# Week 03
+---
 
-因为我的数据是一个跟随时间序列变化的预测，因此我想使用LSTM 模型。这个原因是 RNN 这样的模型，在处理长序列的数据时，容易忽视远距离的时间依赖关系，也就是会出现梯度消失现象。
-而 LSTM 有记忆单元，我们可以控制 seqence 的长度，来控制模型不要忘记某个特定特征的历史信息。
+# **Week 03**
 
-因此，我开始建构我的模型。这个模型将输入参数分为两个部分，第一个部分是序列特征，也就是我们希望模型能够长期保留的特征，而第二部分是固定特征，也就是不会随着时间而改变的一些特征，包括areaName 和 InventoryCount.
+Since my data involves **time series predictions**, I chose to use an **LSTM model**. The reason is that RNN models tend to ignore long-term dependencies when processing long sequences, leading to the vanishing gradient problem. LSTM models, however, include memory cells, and we can control the sequence length to ensure the model retains specific historical information.
+
+### **Model Design**
+
+The model input parameters are divided into two parts:
+1. **Sequence features**: Features we want the model to retain over time.
+2. **Static features**: Features that do not change over time, such as `areaName` and `InventoryCount`.
 
 ![image-20241217130832056.png](image-20241217130832056.png)
 
-我希望对于序列数据，使用 LSTM 处理；对于固定特征，使用Dense 进行静态特征处理，然后在高层级进行特征融合。就像这样：
+For sequence data, I used **LSTM layers**, and for static features, I used **Dense layers**. These features were later fused at a higher level:
 
 ![image-20241217150228750.png](image-20241217150228750.png)
 
-具体的做法的话，我们开始需要生成时间序列的数据和目标值的结构：
+The first step was to generate the structure for time series data and target values:
 
 ![image-20241217151216503.png](image-20241217151216503.png)
 
 ![image-20241217151229824.png](image-20241217151229824.png)
 
-这边有一个 seq_length，这就是LSTM 模型中的记忆的长度，我们每次都会截取 seq_length个连续时间节点的数据，而目标值，是seq_length 个时间节点之后的值。
-
-为了统一输入特征的 size，我们需要去掉前 seq_length 行：
+Here, `seq_length` represents the **memory length** for the LSTM model. At each step, we use `seq_length` consecutive time points as input, and the target value is the value after `seq_length` time points. To unify the input feature size, we removed the first `seq_length` rows:
 
 ![image-20241217151515701.png](image-20241217151515701.png)
 
-最后，我们需要构建两个输入层，分别是时间序列和静态特征的输入层与输出层
+Finally, I built two input layers: one for the **time series** features and one for the **static** features:
 
 ![image-20241217151545203.png](image-20241217151545203.png)
 
-然后，我们需要融合两个部分的特征值，使用这个特征值进行输出；并且，构建输入与输出之间的关系。
+These features were fused for output, and the relationships between inputs and outputs were constructed:
 
 ![image-20241217151729004.png](image-20241217151729004.png)
 
-最后，使用切分好的数据集，进行模型的训练，同时输入两个类型的特征。
+The model was trained using the prepared dataset, incorporating both types of features:
 
 ![image-20241217151933978.png](image-20241217151933978.png)
 
 ![image-20241217151901296.png](image-20241217151901296.png)
 
-【Note】：尊敬的 Hersan 教授，抱歉，我没有保存每周的 jupyter notebook 版本，但是您可以在我的最终 notebook 中找到上面的所有代码，一部分代码可能被注释了，但您一定能找到。
+**Note**: Dear Professor Hersan, I apologize for not saving weekly versions of my Jupyter Notebook, but you can find all the code in my final notebook.
 
-# Week04
+---
 
-在上周的输出后，我忘记了要进行反归一化：
+# **Week 04**
+
+After generating outputs last week, I realized I forgot to **reverse the normalization**:
 
 ![image-20241217152127196.png](image-20241217152127196.png)
 
-在最后，完成归一化之后，我可以直接画图进行输出，并输出评价指标。
+After fixing this, I plotted the outputs and calculated evaluation metrics:
 
 ![image-20241217152837579.png](image-20241217152837579.png)
 
-但是，结果很不好.......
+However, the results were poor:
 
 ![image-20241217123501967.png](image-20241217123501967.png)
 
-我们可以看到散点图中，预测值和真实值的偏差非常大。接着，我就开始找问题：
+### **Issue 1: Incorrect Month Encoding**
 
-**第一个问题：**
-
-我在编码月份的时候，使用了和社区名称一样的编码器，这是错误的。
+I incorrectly encoded the month variable using the same encoder as for the neighborhood names:
 
 ![image-20241217130416882.png](image-20241217130416882.png)
 
-除此之外，我还在网上找到了一个对于月份的更好的编码方式——使用 sin和 cos。
+To solve this, I used **sin and cos encoding** for the month feature to capture its cyclical nature:
 
 ![image-20241217130339190.png](image-20241217130339190.png)
 
-**第二个问题：**
+### **Issue 2: Feature Division Problems**
 
-原先的特征划分有问题！
-
-![image-20241217130701779.png](image-20241217130701779.png)
+The `Year` and `Month` features should be part of the **LSTM input layer** because they are time-dependent, while `areaName` and `InventoryCount` should be treated as static inputs:
 
 ![image-20241217153804060.png](image-20241217153804060.png)
 
-在调整过后，我们可以得到一个预测准确率接近百分百的模型。
+After adjustments, the model achieved nearly **100% prediction accuracy**.
 
-![image-20241217131209765.png](image-20241217131209765.png)
+---
+
+### **Model Optimization**
+
+To optimize the model, I created a function with two key variables:
+1. **`seq_length`**: Memory length of the LSTM.
+2. **`epoch_size`**: Number of iterations.
+
+I tested various combinations of `seq_length` and `epoch_size`:
 
 ![image-20241217162152065.png](image-20241217162152065.png)
 
-结果是：当 epoch_size=30,seq_length=10 时，模型达到最佳状态，平均预测价格的偏差在 17 美金左右。
+The best results were obtained when `epoch_size = 30` and `seq_length = 10`, with an average price prediction error of **$17**.
 
 ![image-20241217162552148.png](image-20241217162552148.png)
+
 
