@@ -26,7 +26,7 @@ First, we need to preprocess the data. I downloaded two tables from Streeteasy's
 
 **Original data**:  
 
-1.png
+![Original data](1.png)
 
 To process this data, we needed to make time a single variable and include it as a column in the table. The result looked like this:
 
